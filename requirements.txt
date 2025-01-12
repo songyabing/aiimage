@@ -1,0 +1,5 @@
+flask
+pillow
+torch
+transformers
+numpy<2
