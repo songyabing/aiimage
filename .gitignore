@@ -1,3 +1,4 @@
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
@@ -18,11 +19,26 @@ var/
 *.egg-info/
 .installed.cfg
 *.egg
+
+# 环境文件
 .env
+.env.*
 .venv
 venv/
 ENV/
+ai-image-generator/venv/*
+
+# IDE
 .idea/
 .vscode/
+
+# 日志文件
 *.log
-static/uploads/
+
+# 上传的文件
+static/uploads/*
+!static/uploads/.gitkeep
+
+# 系统文件
+.DS_Store
+aiimage-clean/
