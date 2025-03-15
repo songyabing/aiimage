@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>免费图片转提示词生成器</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #ffffff;
+            min-height: 100vh;
+        }
+
+        .navbar {
+            display: flex;
+            align-items: center;
+            background-color: rgba(255, 255, 255, 0.98);
+            color: rgb(0, 0, 0);
+            padding: 15px 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            transition: all 0.3s ease;
+            height: 60px;
+            box-sizing: border-box;
+        }
+
+        .navbar.scrolled {
+            background-color: rgba(255, 255, 255, 0.98);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 10px 20px;
+        }   
+
+        .logo {
+            margin-left: 200px;
+            font-weight: 500;
+            font-size: 18px;
+            transition: all 0.3s ease;
+        } 
+        
+        .menu {
+            display: flex;
+            gap: 60px;
+            margin-left: 300px;
+            align-items: center;
+        }              
+
+        .menu a {
+            color: rgb(0, 0, 0);
+            text-decoration: none;
+            font-size: 16px;
+            padding: 5px 10px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .menu a:after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 2px;
+            bottom: 0;
+            left: 50%;
+            background-color: #4CAF50;
+            transition: all 0.3s ease;
+        }
+
+        .menu a:hover:after {
+            width: 100%;
+            left: 0;
+        }
+
+        .menu a.active {
+            color: #4CAF50;
+        }
+
+        .menu a.active:after {
+            width: 100%;
+            left: 0;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #f7f7f7;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .sub-header {
+            text-align: center;
+            margin-top: 10px; /* 设置文案上方的间距 */
+            margin-bottom: 30px; /* 设置文案下方的间距 */
+        }   
+
+        .sub-header h2 {
+            font-size: 42px;
+            margin: 20px 0;
+            font-weight: bold;
+            color: #333; /* 字体颜色 */
+            letter-spacing: 1px; /* 字间距 */
+        }
+
+        .sub-header p {
+            margin-top: 10px; /* 调整标题与段落之间的间距 */
+            margin-bottom: 0; /* 段落下方间距，可根据需求调整 */
+        }
+
+        .tabs {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .tabs button {
+            padding: 10px 20px;
+            border: none;
+            border-bottom: 2px solid transparent;
+            background-color: transparent;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .tabs button.active {
+            border-bottom: 2px solid #4CAF50;
+            font-weight: bold;
+        }
+
+        .upload-section {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            align-items: stretch;
+        }
+
+        .upload-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 300px;
+            text-align: center;
+            border: 2px dashed #ccc;
+            border-radius: 10px;
+            background-color: #f9f9f9;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .upload-area.dragover {
+            background-color: #e3f2fd;
+            border-color: #2196F3;
+        }
+
+        .custom-file-upload {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #4CAF50;
+            color: white;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            margin-bottom: 10px;
+        }
+
+        .custom-file-upload:hover {
+            background-color: #45a049;
+        }
+
+        .upload-area input[type="file"] {
+            display: none;
+        }
+
+        .upload-text {
+            color: #666;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+
+        .preview-area {
+            flex: 1;
+            text-align: center;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            background-color: #f9f9f9;
+            padding: 10px;
+        }
+
+        .preview-area img {
+            max-width: 100%;
+            max-height: 300px;
+            object-fit: contain; /* 确保图片不被裁剪 */
+        }
+
+        .result-section {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            background-color: #f9f9f9;
+        }
+
+        .upload-hint {
+            font-size: 14px;
+            color: #666;
+            margin-top: 10px;
+        }
+
+        /* 使用案例样式 */
+        .examples-section {
+            max-width: 1200px; /* 设置最大宽度 */
+            margin: 20px auto; /* 居中显示 */
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            border-bottom: none; /* 去除底部区域 */
+        }
+
+        .examples-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .example-item {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .example-item:hover {
+            transform: translateY(-5px);
+        }
+
+        .example-item img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+
+        .example-prompt {
+            font-size: 14px;
+            color: #666;
+            line-height: 1.4;
+        }
+
+        /* 常见问题样式 */
+        .faq-section {
+            max-width: 1200px; /* 设置最大宽度 */
+            margin: 20px auto; /* 居中显示 */
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            border-bottom: none; /* 去除底部区域 */
+        }
+
+        .faq-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .faq-item {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .faq-item:hover {
+            transform: translateX(5px);
+        }
+
+        .faq-question {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .faq-answer {
+            color: #666;
+            line-height: 1.5;
+            display: none;
+        }
+
+        .faq-item.active .faq-answer {
+            display: block;
+        }
+
+        /* 响应式布局适配 */
+        @media screen and (max-width: 768px) {
+            .examples-section, .faq-section {
+                max-width: 95%; /* 在小屏幕上更宽 */
+                padding: 15px;
+            }
+
+            .logo {
+                margin-left: 20px;
+            }
+
+            .menu {
+                margin-left: 40px;
+            }
+        }
+
+        @media screen and (max-width: 768px) {
+            .navbar {
+                flex-direction: column;
+                height: auto;
+                padding: 10px;
+            }
+            .navbar.scrolled {
+                padding: 8px;
+            }
+            .logo {
+                margin-left: 0;
+                margin-bottom: 10px;
+            }
+            .menu {
+                margin-left: 0;
+                justify-content: center;
+                gap: 20px;
+            }
+            .page-content {
+                padding-top: 100px;
+            }
+
+            .upload-section {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .upload-area, .preview-area {
+                min-height: 200px;
+                width: 100%;
+            }
+
+            button[onclick="uploadImage()"] {
+                width: 100%;
+                max-width: 300px;
+                padding: 10px 20px;
+            }
+
+            .result-section {
+                margin-top: 15px;
+                padding: 15px;
+            }
+
+            #resultDisplay {
+                font-size: 14px;
+                line-height: 1.4;
+            }
+
+            .examples-grid {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+
+            .sub-header {
+                padding: 0 15px;
+            }
+
+            .sub-header h2 {
+                font-size: 24px;
+            }
+
+            .sub-header p {
+                font-size: 14px;
+            }
+        }
+
+        @media screen and (max-width: 480px) {
+            .navbar {
+                padding: 10px;
+            }
+
+            .menu {
+                gap: 15px;
+            }
+
+            .menu a {
+                font-size: 14px;
+            }
+
+            .tabs button {
+                padding: 8px 15px;
+                font-size: 14px;
+            }
+
+            .upload-area, .preview-area {
+                min-height: 150px;
+                padding: 15px;
+            }
+
+            .upload-hint {
+                font-size: 12px;
+                margin-top: 8px;
+            }
+
+            button[onclick="uploadImage()"] {
+                font-size: 14px;
+                padding: 8px 16px;
+            }
+
+            .faq-item {
+                padding: 15px;
+            }
+
+            .faq-question {
+                font-size: 14px;
+            }
+
+            .faq-answer {
+                font-size: 13px;
+            }
+
+            .example-item {
+                padding: 10px;
+            }
+
+            .example-prompt {
+                font-size: 13px;
+            }
+        }
+
+        /* 优化文件上传按钮样式 */
+        .custom-file-upload {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #f0f0f0;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 0;
+            transition: background-color 0.3s;
+        }
+
+        .custom-file-upload:hover {
+            background-color: #e0e0e0;
+        }
+
+        #imageUpload {
+            display: none;
+        }
+
+        /* 调整生成提示词按钮样式 */
+        button[onclick="uploadImage()"] {
+            display: block;
+            width: 200px;
+            margin: 20px auto;
+            padding: 12px 24px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+
+        button[onclick="uploadImage()"]:hover {
+            background-color: #45a049;
+        }
+
+        /* 优化上传区域内部元素的布局 */
+        .upload-area h3, .preview-area h3 {
+            margin-bottom: 15px;
+        }
+
+        .upload-area .upload-hint {
+            margin-top: 15px;
+        }
+
+        @media screen and (max-width: 768px) {
+            .upload-area, .preview-area {
+                min-height: 200px;
+                padding: 15px;
+            }
+        }
+
+        @media screen and (max-width: 480px) {
+            .upload-area, .preview-area {
+                min-height: 150px;
+                padding: 12px;
+                border-width: 1px;
+            }
+        }
+
+        .action-section {
+            display: flex;
+            justify-content: flex-start; /* 左对齐 */
+            gap: 100px; /* 按钮间距 */
+            margin-bottom: 20px;
+            align-items: center; /* 垂直居中对齐 */
+        }
+
+        .action-section button {
+            margin-right: 10px;
+        }
+
+        #generateButton {
+            padding: 12px 24px;
+            background-color: #cccccc;
+            color: #666666;
+            border: none;
+            border-radius: 5px;
+            cursor: not-allowed;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        #generateButton.active {
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+        }
+
+        #generateButton.active:hover {
+            background-color: #45a049;
+        }
+
+        #historyButton {
+            padding: 12px 24px;
+            background-color: #f0f0f0;
+            color: #333;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+
+        #historyButton:hover {
+            background-color: #e0e0e0;
+        }
+
+        .history-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+            animation: modalFadeIn 0.3s ease;
+        }
+
+        @keyframes modalFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .close-button {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #666;
+            padding: 0 5px;
+            line-height: 1;
+            transition: color 0.3s;
+        }
+
+        .close-button:hover {
+            color: #333;
+        }
+
+        .history-list {
+            max-height: calc(80vh - 100px);
+            overflow-y: auto;
+        }
+
+        /* 修改历史记录项样式 */
+        .history-item {
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            transition: transform 0.2s;
+        }
+
+        .history-item:hover {
+            transform: translateX(5px);
+        }
+
+        /* 响应式调整 */
+        @media screen and (max-width: 768px) {
+            .modal-content {
+                width: 95%;
+                margin: 10px;
+                max-height: 90vh;
+            }
+
+            .history-list {
+                max-height: calc(90vh - 100px);
+            }
+        }
+
+        .history-item .timestamp {
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 5px;
+        }
+
+        .history-item .prompt {
+            color: #333;
+        }
+
+        @media screen and (max-width: 768px) {
+            .action-section {
+                flex-direction: column;
+                align-items: stretch;
+                padding-left: 0;
+            }
+
+            #generateButton, #historyButton {
+                width: 100%;
+            }
+        }
+
+        .page-content {
+            padding-top: 80px;
+            min-height: calc(100vh - 80px);
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <div class="logo">ImagePrompt.org</div>
+        <div class="menu">
+            <a href="/">首页</a>
+            <a href="/inspiration">灵感</a>
+            <a href="/pricing">价格</a>
+        </div>
+    </div>
+
+    <div class="page-content">
+    <div class="sub-header">
+        <h2>免费图片转提示词生成器</h2>
+        <p>将图片转换为提示词,以生成您自己的图片</p>
+    </div>
+    <div class="container">
+        <div class="tabs">
+            <button class="active" onclick="switchTab('image-to-prompt')">图片转提示词</button>
+            <button onclick="switchTab('text-to-prompt')">文本转提示词</button>
+        </div>
+        <div id="image-to-prompt" class="tab-content">
+            <div class="upload-section">
+                    <div class="upload-area" id="dropZone">
+                        <label for="imageUpload" class="custom-file-upload">
+                            选择图片
+                        </label>
+                        <input type="file" id="imageUpload" accept="image/png,image/jpeg,image/webp">
+                        <p class="upload-text">上传一张照片或拖拽上传</p>
+                        <p class="upload-hint">支持 PNG、JPG、WEBP 格式，大小不超过 4MB</p>
+                </div>
+
+                <div class="preview-area">
+                    <h3>图片预览</h3>
+                    <img id="previewImage" src="" alt="预览图片">
+                </div>
+            </div>
+
+                <div class="action-section">
+                    <button id="generateButton" onclick="uploadImage()" disabled>生成提示词</button>
+                    <button id="historyButton" onclick="toggleHistory()">提示词历史</button>
+                </div>
+
+            <div class="result-section">
+                <h3>提示词展示</h3>
+                <div id="resultDisplay">上传图片后，提示词将显示在这里。</div>
+            </div>
+
+                <div id="historyPanel" class="history-modal" style="display: none;">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3>提示词历史</h3>
+                            <button class="close-button" onclick="toggleHistory()">×</button>
+                        </div>
+                        <div id="historyList" class="history-list"></div>
+                    </div>
+            </div>
+        </div>
+
+        <div id="text-to-prompt" class="tab-content" style="display: none;">
+            <h3>文本转提示词功能开发中...</h3>
+            </div>
+        </div>
+
+        <div class="examples-section">
+            <h3>高精度图片转提示词生成</h3>
+            <div class="examples-grid">
+                <div class="example-item">
+                    <img src="{{ url_for('static', filename='images/043Aimage.png') }}" alt="示例图片1">
+                    <div class="example-prompt">Transform your image into detailed image prompt with Image to Prompt, enhancing your creative process and optimizing AI-driven design efficiency.</div>
+                </div>
+                <div class="example-item">
+                    <img src="{{ url_for('static', filename='images/055Aimage.webp') }}" alt="示例图片2">
+                    <div class="example-prompt">日落时分的海滩风景，金色的阳光洒在海面上</div>
+                </div>
+                <div class="example-item">
+                    <img src="{{ url_for('static', filename='images/055Aimage.webp') }}" alt="示例图片3">
+                    <div class="example-prompt">一杯冒着热气的咖啡，旁边放着一本打开的书</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="faq-section">
+            <h3>常见问题</h3>
+            <div class="faq-list">
+                <div class="faq-item">
+                    <div class="faq-question">What is lmage to Prompt tool?</div>
+                    <div class="faq-answer">Image to Prompt is a tool that converts images into image prompt(looks like textual descriptions). It uses artificial intelligence to analyze image content and generate image prompt. Image prompt can be used to create similar images or for other AI text-to-image generation tasks. Image to Prompt generator makes it easier for users to understand and describe image content, facilitating AI image generation and other creative work.</div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question">Is lmage to Prompt free to use?</div>
+                    <div class="faq-answer">Yes, our Image to Prompt Generator offers 5 free uses daily for all users. This daily limit is shared across all image-to-text tools (Image to Prompt, AI Describe Image) on imageprompt.org. If you need more usage, you can upgrade to our premium plans or buy a one-time Power Pack for more access. We aim to make this tool accessible while ensuring sustainable service quality.</div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question">Is lmage to Prompt free to use?</div>
+                    <div class="faq-answer">The daily usage resets at midnight Pacific Time (PT) every day. This means you can use our Image to Prompt Generator up to 5 times daily, and the count will reset at the start of each day in PT. You can find the next reset time in your timezone next to the usage stats.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.style.display = 'none';
+            });
+            document.querySelectorAll('.tabs button').forEach(button => {
+                button.classList.remove('active');
+            });
+            document.getElementById(tabId).style.display = 'block';
+            document.querySelector(`.tabs button[onclick="switchTab('${tabId}')"]`).classList.add('active');
+        }
+
+        const imageInput = document.getElementById('imageUpload');
+        const previewImage = document.getElementById('previewImage');
+        const resultDisplay = document.getElementById('resultDisplay');
+
+        imageInput.addEventListener('change', () => {
+            const file = imageInput.files[0];
+            if (file) {
+                // 检查文件大小（4MB = 4 * 1024 * 1024 bytes）
+                if (file.size > 4 * 1024 * 1024) {
+                    alert('图片大小不能超过 4MB！');
+                    imageInput.value = ''; // 清空选择
+                    previewImage.src = '';
+                    return;
+                }
+                
+                // 检查文件类型
+                const validTypes = ['image/png', 'image/jpeg', 'image/webp'];
+                if (!validTypes.includes(file.type)) {
+                    alert('只支持 PNG、JPG 或 WEBP 格式的图片！');
+                    imageInput.value = ''; // 清空选择
+                    previewImage.src = '';
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    previewImage.src = e.target.result;
+                    generateButton.classList.add('active');
+                    generateButton.disabled = false;
+                };
+                reader.readAsDataURL(file);
+            } else {
+                generateButton.classList.remove('active');
+                generateButton.disabled = true;
+            }
+        });
+
+        function uploadImage() {
+            const file = imageInput.files[0];
+            if (!file) {
+                alert('请先上传图片！');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('files', file);
+
+            // 更新提示词生成状态
+            resultDisplay.innerHTML = `
+                <div style="color: #666; text-align: center;">
+                    <div style="margin-bottom: 10px;">提示词生成中... 请稍候</div>
+                    <div style="font-size: 14px;">处理较大图片可能需要更长时间</div>
+                </div>
+            `;
+
+            // 禁用生成按钮，避免重复点击
+            generateButton.disabled = true;
+            generateButton.style.backgroundColor = '#cccccc';
+            generateButton.style.cursor = 'not-allowed';
+
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Response data:', data);
+                if (data.captions && data.captions.length > 0) {
+                    const caption = data.captions[0].caption;
+                    if (caption === 'Processing...') {
+                        setTimeout(() => uploadImage(), 2000);
+                        return;
+                    }
+                    resultDisplay.innerHTML = `
+                        <div style="color: #333;">
+                            <div style="margin-bottom: 10px; color: #4CAF50;">✓ 提示词生成完成</div>
+                            <div style="background: #f5f5f5; padding: 15px; border-radius: 5px; margin-top: 10px;">
+                                ${caption}
+                            </div>
+                        </div>
+                    `;
+                    addToHistory(caption);
+                } else {
+                    throw new Error('未获取到提示词数据');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                resultDisplay.innerHTML = `
+                    <div style="color: #f44336; text-align: center;">
+                        <div style="margin-bottom: 10px;">生成提示词失败</div>
+                        <div style="font-size: 14px;">
+                            请检查图片格式是否正确，稍后重试。
+                            <br>
+                            错误信息：${error.message}
+                        </div>
+                    </div>
+                `;
+            })
+            .finally(() => {
+                // 恢复生成按钮状态
+                generateButton.disabled = false;
+                generateButton.style.backgroundColor = '#4CAF50';
+                generateButton.style.cursor = 'pointer';
+            });
+        }
+
+        // 添加历史记录函数
+        function addToHistory(prompt) {
+            const historyItem = {
+                timestamp: new Date().toLocaleString(),
+                prompt: prompt
+            };
+
+            promptHistory.unshift(historyItem);
+            if (promptHistory.length > 10) {
+                promptHistory.pop();
+            }
+
+            localStorage.setItem('promptHistory', JSON.stringify(promptHistory));
+            updateHistoryDisplay();
+        }
+
+        // 更新历史记录显示
+        function updateHistoryDisplay() {
+            historyList.innerHTML = '';
+            promptHistory.forEach(item => {
+                const historyItem = document.createElement('div');
+                historyItem.className = 'history-item';
+                historyItem.innerHTML = `
+                    <div class="timestamp">${item.timestamp}</div>
+                    <div class="prompt">${item.prompt}</div>
+                `;
+                historyList.appendChild(historyItem);
+            });
+        }
+
+        // 切换历史记录面板显示
+        function toggleHistory() {
+            const isVisible = historyPanel.style.display !== 'none';
+            historyPanel.style.display = isVisible ? 'none' : 'flex';
+            if (!isVisible) {
+                updateHistoryDisplay();
+                // 添加点击空白区域关闭弹窗
+                historyPanel.onclick = function(event) {
+                    if (event.target === historyPanel) {
+                        toggleHistory();
+                    }
+                };
+            }
+        }
+
+        // 添加ESC键关闭弹窗
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape' && historyPanel.style.display !== 'none') {
+                toggleHistory();
+            }
+        });
+
+        // 添加FAQ点击展开效果
+        document.querySelectorAll('.faq-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const wasActive = item.classList.contains('active');
+                
+                // 先关闭所有其他的FAQ项
+                document.querySelectorAll('.faq-item').forEach(otherItem => {
+                    otherItem.classList.remove('active');
+                });
+                
+                // 如果当前项之前不是激活状态，则激活它
+                if (!wasActive) {
+                    item.classList.add('active');
+                }
+            });
+        });
+
+        // 确保在页面加载时初始化 promptHistory
+        const generateButton = document.getElementById('generateButton');
+        const historyPanel = document.getElementById('historyPanel');
+        const historyList = document.getElementById('historyList');
+        let promptHistory = JSON.parse(localStorage.getItem('promptHistory') || '[]');
+
+        // 添加滚动效果
+        window.addEventListener('scroll', function() {
+            const navbar = document.querySelector('.navbar');
+            if (window.scrollY > 50) {
+                navbar.classList.add('scrolled');
+            } else {
+                navbar.classList.remove('scrolled');
+            }
+        });
+
+        // 设置当前页面的导航项为激活状态
+        document.addEventListener('DOMContentLoaded', function() {
+            const currentPath = window.location.pathname;
+            const menuLinks = document.querySelectorAll('.menu a');
+            
+            menuLinks.forEach(link => {
+                if (link.getAttribute('href') === currentPath) {
+                    link.classList.add('active');
+                }
+            });
+        });
+
+        const dropZone = document.getElementById('dropZone');
+
+        // 阻止默认拖拽行为
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, preventDefaults, false);
+            document.body.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        // 添加拖拽效果
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, highlight, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, unhighlight, false);
+        });
+
+        function highlight(e) {
+            dropZone.classList.add('dragover');
+        }
+
+        function unhighlight(e) {
+            dropZone.classList.remove('dragover');
+        }
+
+        // 处理文件拖放
+        dropZone.addEventListener('drop', handleDrop, false);
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const file = dt.files[0];
+            
+            if (file) {
+                // 检查文件大小
+                if (file.size > 4 * 1024 * 1024) {
+                    alert('图片大小不能超过 4MB！');
+                    return;
+                }
+                
+                // 检查文件类型
+                const validTypes = ['image/png', 'image/jpeg', 'image/webp'];
+                if (!validTypes.includes(file.type)) {
+                    alert('只支持 PNG、JPG 或 WEBP 格式的图片！');
+                    return;
+                }
+
+                // 更新文件输入框
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(file);
+                imageInput.files = dataTransfer.files;
+
+                // 预览图片
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    previewImage.src = e.target.result;
+                    generateButton.classList.add('active');
+                    generateButton.disabled = false;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+    </script>
+</body>
+</html>

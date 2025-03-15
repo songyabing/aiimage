@@ -1,0 +1,78 @@
+
+
+
+
+
+
+import os
+from flask import Flask, render_template, request, jsonify
+from werkzeug.utils import secure_filename
+from transformers import BlipProcessor, BlipForConditionalGeneration
+from PIL import Image
+import configparser
+import threading
+import queue
+import multiprocessing  # 导入 multiprocessing
+
+# 读取配置文件
+config = configparser.ConfigParser()
+config.read('config.ini')
+
+UPLOAD_FOLDER = config['DEFAULT']['UPLOAD_FOLDER']
+MODEL_PATH = config['DEFAULT']['MODEL_PATH']
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
+
+app = Flask(__name__)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+# 加载模型和处理器
+processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
+model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base")
+
+# 创建线程队列，用于存储生成的描述
+results_queue = queue.Queue()
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def generate_caption(file_path, result_queue):
+    """处理单个文件并将结果放入队列"""
+    image = Image.open(file_path).convert("RGB")
+    inputs = processor(image, return_tensors="pt")
+    outputs = model.generate(**inputs)
+    caption = processor.decode(outputs[0], skip_special_tokens=True)
+    result_queue.put(caption)
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/upload', methods=['POST'])
+def upload():
+    if 'files' not in request.files:
+        return jsonify({'error': 'No file uploaded'}), 400
+
+    captions = []
+    for file in request.files.getlist('files'):
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(filepath)
+
+            # 使用队列来处理并返回结果
+            thread = threading.Thread(target=generate_caption, args=(filepath, results_queue))
+            thread.start()
+            captions.append({'filename': filename, 'caption': 'Processing...'})
+        else:
+            return jsonify({'error': 'Invalid file format'})
+
+    # 等待线程处理完结果并更新
+    processed_captions = []
+    while not results_queue.empty():
+        processed_captions.append(results_queue.get())
+
+    return jsonify({'captions': [{'filename': filename, 'caption': caption} for filename, caption in zip([file.filename for file in request.files.getlist('files')], processed_captions)]})
+
+if __name__ == '__main__':
+    multiprocessing.freeze_support()  # 可选，针对打包应用的情况
+    app.run(debug=True)
